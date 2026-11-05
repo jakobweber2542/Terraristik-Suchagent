@@ -55,14 +55,17 @@ Anzeigen, gemeldet werden nur Anzeigen, die danach neu erscheinen.
 **Wie gesucht wird:** Titel und Text jeder Anzeige werden durchsucht. Groß-/Kleinschreibung
 und Umlaute sind egal (`Königspython` findet auch `Koenigspython`). Mehrere Wörter in einem
 Begriff müssen alle vorkommen, egal in welcher Reihenfolge. Ein Wort mit Minus schließt aus:
-`/add pumilio -suche` meldet keine Suchanzeigen. Abkürzungen wie `O. pumilio` am besten
+`/add pumilio -suche` meldet keine Suchanzeigen. Mit `|` reicht eine von mehreren
+Varianten: `/add Clemmys|Clemys|Tropfenschildkröte adult|geschlechtsreif|weibchen|female`
+meldet nur Anzeigen, in denen einer der Namen **und** eines der Zusatzwörter vorkommt.
+Gesucht wird auch innerhalb von Wörtern (`adult` findet auch `subadult`). Abkürzungen wie `O. pumilio` am besten
 zusätzlich als eigenen Begriff anlegen.
 
-Befehle werden beim nächsten Durchlauf verarbeitet, also meist nach 5–15 Minuten.
+Befehle werden bei der nächsten Prüfung verarbeitet, also meist innerhalb von 5 Minuten.
 Die Liste kannst du alternativ auch direkt in `keywords.txt` auf GitHub bearbeiten.
 
 ## Gut zu wissen
-- **Takt:** eingestellt sind 5 Minuten. GitHub startet geplante Läufe manchmal verzögert, real sind es oft 5–15 Minuten.
-- **Public oder Private:** In einem öffentlichen Repository ist GitHub Actions unbegrenzt kostenlos. Dafür sind `keywords.txt` und `state.json` für jeden sichtbar, der das Repository findet (dein Token bleibt geheim). Bei einem privaten Repository sind ca. 2000 Freiminuten pro Monat dabei; dann in `suchagent.yml` die Zeile `cron: "*/5 * * * *"` auf `cron: "*/30 * * * *"` ändern.
+- **Takt:** GitHub startet geplante Läufe nur etwa einmal pro Stunde. Deshalb bleibt jeder Lauf rund 90 Minuten aktiv und prüft darin alle 5 Minuten; der nächste Start wartet so lange und übernimmt danach. Neue Anzeigen und Telegram-Befehle werden so meist innerhalb von 5 Minuten bearbeitet. Das hält GitHub Actions praktisch rund um die Uhr beschäftigt – das liegt in einer Grauzone der GitHub-Nutzungsbedingungen.
+- **Public oder Private:** In einem öffentlichen Repository ist GitHub Actions unbegrenzt kostenlos. Dafür sind `keywords.txt` und `state.json` für jeden sichtbar, der das Repository findet (dein Token bleibt geheim). Bei einem privaten Repository sind nur ca. 2000 Freiminuten pro Monat dabei – der Dauerbetrieb braucht rund 43 000, das Repository muss also öffentlich bleiben.
 - **Störungen:** Kann der Agent die Seite mehrmals hintereinander nicht lesen, bekommst du eine Warnung per Telegram, und eine Entwarnung, sobald es wieder klappt.
 - **Pausieren für längere Zeit:** Actions → Suchagent → „…“ → Disable workflow.

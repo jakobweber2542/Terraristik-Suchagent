@@ -1,0 +1,79 @@
+name: Suchagent
+
+# GitHub startet geplante Läufe in der Praxis nur etwa einmal pro Stunde.
+# Deshalb bleibt jeder Lauf rund 90 Minuten aktiv und prüft darin alle 5 Minuten.
+# Der nächste geplante Start wartet so lange in der Warteschlange und übernimmt danach.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # so oft wie möglich anstoßen (GitHub startet trotzdem verzögert)
+  workflow_dispatch:        # erlaubt einen Start per Knopfdruck unter "Actions"
+
+permissions:
+  contents: write           # um state.json und keywords.txt zu speichern
+  actions: write            # um den Zeitplan aktiv zu halten
+
+concurrency:
+  group: suchagent
+  cancel-in-progress: false # laufende Prüfung nie abbrechen, der nächste Lauf wartet
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Pakete installieren
+        run: pip install -r requirements.txt
+
+      - name: Anzeigen prüfen (alle 5 Minuten, ca. 90 Minuten lang)
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        run: |
+          git config user.name "suchagent-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Stand nach GitHub speichern
+          speichern() {
+            git add state.json keywords.txt
+            if ! git diff --cached --quiet; then
+              git commit -m "Suchagent: Stand aktualisiert" -q
+              git pull --rebase -q || git rebase --abort || true
+              git push -q || echo "Push fehlgeschlagen – wird später nachgeholt"
+            fi
+          }
+
+          # Hat sich mehr geändert als nur die Uhrzeit der letzten Prüfung?
+          wichtig() {
+            git diff -U0 -- state.json keywords.txt | grep -E '^[+-][^+-]' | grep -vq '"last_ok"'
+          }
+
+          ende=$(( $(date +%s) + 88 * 60 ))
+          while true; do
+            # Änderungen von außen übernehmen (z. B. keywords.txt auf GitHub bearbeitet)
+            git pull --rebase --autostash -q || git rebase --abort || true
+
+            python suchagent.py || echo "Durchlauf fehlgeschlagen – nächster Versuch in 5 Minuten"
+
+            if wichtig; then
+              speichern
+            fi
+
+            if [ $(( $(date +%s) + 330 )) -ge "$ende" ]; then
+              break
+            fi
+            sleep 300
+          done
+
+          speichern
+
+      - name: Zeitplan aktiv halten
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable suchagent.yml || true
