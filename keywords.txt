@@ -1,0 +1,7 @@
+# Suchbegriffe für den Suchagent – ein Begriff pro Zeile.
+# Groß-/Kleinschreibung und Umlaute sind egal.
+# Mehrere Wörter in einer Zeile = alle müssen in der Anzeige vorkommen (Reihenfolge egal).
+# Ein Wort mit Minus davor schließt aus, z. B.:  pumilio -suche
+# Zeilen mit # am Anfang werden ignoriert.
+# Du kannst die Liste hier bearbeiten oder per Telegram (/add, /del).
+

@@ -1,0 +1,50 @@
+name: Suchagent
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # alle 5 Minuten (GitHub startet oft etwas verzögert)
+  workflow_dispatch:        # erlaubt einen Start per Knopfdruck unter "Actions"
+
+permissions:
+  contents: write           # um state.json und keywords.txt zu speichern
+  actions: write            # um den Zeitplan aktiv zu halten
+
+concurrency:
+  group: suchagent
+  cancel-in-progress: false
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Pakete installieren
+        run: pip install -r requirements.txt
+
+      - name: Anzeigen prüfen
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        run: python suchagent.py
+
+      - name: Stand speichern
+        run: |
+          git config user.name "suchagent-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state.json keywords.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Suchagent: Stand aktualisiert" -q
+            git pull --rebase --autostash -q || true
+            git push -q || echo "Push fehlgeschlagen – wird beim nächsten Lauf nachgeholt"
+          fi
+
+      - name: Zeitplan aktiv halten
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable suchagent.yml || true
