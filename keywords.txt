@@ -2,6 +2,7 @@
 # Groß-/Kleinschreibung und Umlaute sind egal.
 # Mehrere Wörter in einer Zeile = alle müssen in der Anzeige vorkommen (Reihenfolge egal).
 # Ein Wort mit Minus davor schließt aus, z. B.:  pumilio -suche
+# Mit | reicht eine von mehreren Varianten, z. B.:  Clemmys|Tropfenschildkröte adult|geschlechtsreif
 # Zeilen mit # am Anfang werden ignoriert.
 # Du kannst die Liste hier bearbeiten oder per Telegram (/add, /del).
 
@@ -26,8 +27,6 @@ Honigtopfameisen
 Honeypot ant
 termites
 termiten
-Clemmys guttata
-Clemmys
 Grasnatter
 Opheodrys
 aestivus
@@ -38,4 +37,4 @@ Harpegnathos venator
 Formikarium
 Formicarium
 Epiperipatus
-Tropfenschildkröte
+Clemmys|Clemys|Tropfenschildkröte adult|geschlechtsreif|weibchen|female
