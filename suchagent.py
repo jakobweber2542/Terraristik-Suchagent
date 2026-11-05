@@ -30,7 +30,7 @@ LIST_URL = BASE + "/tb/kaufen-und-verkaufen/terraristik-anzeigen/01/"
 SEARCH_URL = LIST_URL + "?ftsearch={q}"
 PAGES = 2                      # 2 Seiten = die neuesten 40 Anzeigen pro Lauf
 MAX_SEEN = 1500                # so viele Anzeigen-Nummern merken wir uns
-FAIL_ALERT_AFTER = 6           # nach so vielen Fehlversuchen in Folge: Warnung schicken
+FAIL_ALERT_AFTER = 12          # nach so vielen Fehlversuchen in Folge (ca. 1 Stunde): Warnung schicken
 
 HERE = Path(__file__).resolve().parent
 STATE_FILE = HERE / "state.json"
@@ -92,6 +92,7 @@ KEYWORDS_HEADER = """# Suchbegriffe für den Suchagent – ein Begriff pro Zeile
 # Groß-/Kleinschreibung und Umlaute sind egal.
 # Mehrere Wörter in einer Zeile = alle müssen in der Anzeige vorkommen (Reihenfolge egal).
 # Ein Wort mit Minus davor schließt aus, z. B.:  pumilio -suche
+# Mit | reicht eine von mehreren Varianten, z. B.:  Clemmys|Tropfenschildkröte adult|geschlechtsreif
 # Zeilen mit # am Anfang werden ignoriert.
 # Du kannst die Liste hier bearbeiten oder per Telegram (/add, /del).
 """
@@ -102,17 +103,32 @@ def save_keywords(kws: list[str]) -> None:
                              encoding="utf-8")
 
 
+def _alternatives(word: str) -> list[str]:
+    """'adult|geschlechtsreif' -> ['adult', 'geschlechtsreif'] (normalisiert, ohne Leere)."""
+    return [a for a in (normalize(x).strip() for x in word.split("|")) if a]
+
+
+def keyword_words(keyword: str) -> list[str]:
+    """Teilt einen Suchbegriff in Wörter. Leerzeichen um | werden ignoriert,
+    'adult | geschlechtsreif' ist also dasselbe wie 'adult|geschlechtsreif'."""
+    return re.sub(r"\s*\|\s*", "|", keyword.strip()).split()
+
+
 def keyword_matches(keyword: str, norm_text: str) -> bool:
+    """Alle Wörter müssen vorkommen. Bei 'a|b|c' reicht eines davon.
+    Wörter mit Minus davor (auch '-a|b') dürfen nicht vorkommen."""
     must, must_not = [], []
-    for word in keyword.split():
+    for word in keyword_words(keyword):
         if word.startswith("-") and len(word) > 1:
-            must_not.append(normalize(word[1:]).strip())
+            must_not += _alternatives(word[1:])
         else:
-            must.append(normalize(word).strip())
-    must = [w for w in must if w]
+            alts = _alternatives(word)
+            if alts:
+                must.append(alts)
     if not must:
         return False
-    return all(w in norm_text for w in must) and not any(w and w in norm_text for w in must_not)
+    return (all(any(a in norm_text for a in alts) for alts in must)
+            and not any(w in norm_text for w in must_not))
 
 
 # --------------------------------------------------------------------------- Telegram
@@ -153,7 +169,10 @@ HELP = (
     "Tipps: Mehrere Wörter in einem Begriff müssen alle vorkommen, z. B. "
     "<code>/add oophaga pumilio</code>. Mit Minus schließt du Wörter aus: "
     "<code>/add pumilio -suche</code>.\n"
-    "Befehle werden beim nächsten Durchlauf verarbeitet (meist innerhalb von 5–15 Minuten)."
+    "Mit | reicht eine von mehreren Varianten: "
+    "<code>/add Clemmys|Tropfenschildkröte adult|geschlechtsreif</code> meldet Anzeigen mit "
+    "(Clemmys oder Tropfenschildkröte) und (adult oder geschlechtsreif).\n"
+    "Befehle werden bei der nächsten Prüfung verarbeitet (meist innerhalb von 5 Minuten)."
 )
 
 
@@ -164,12 +183,33 @@ def format_list(kws: list[str]) -> str:
     return "<b>Deine Suchbegriffe:</b>\n" + "\n".join(lines)
 
 
+def site_queries(query: str) -> list[str]:
+    """Was an die Volltextsuche der Seite geschickt wird.
+    Ohne | wie bisher der ganze Begriff. Mit | wird nach jeder Variante des ersten
+    Wortes einzeln gesucht ('Clemmys|Tropfenschildkröte adult' -> 'Clemmys',
+    'Tropfenschildkröte'); den Rest prüft danach keyword_matches."""
+    if "|" not in query:
+        return [query]
+    for word in keyword_words(query):
+        if not word.startswith("-"):
+            return [a for a in word.split("|") if a.strip()][:6]
+    return []
+
+
 def search_now(query: str, limit: int = 5) -> str:
     """Nutzt die Volltextsuche der Seite, um aktuell vorhandene Anzeigen zu zeigen."""
+    ads, ids = [], set()
     try:
-        ads = parse_listing(fetch(SEARCH_URL.format(q=quote_plus(query))))
+        for i, q in enumerate(site_queries(query)):
+            if i:
+                time.sleep(1)  # höflich zur Seite sein
+            for ad in parse_listing(fetch(SEARCH_URL.format(q=quote_plus(q)))):
+                if ad["id"] not in ids:
+                    ids.add(ad["id"])
+                    ads.append(ad)
     except Exception as e:  # noqa: BLE001
         return f"(Online-Suche gerade nicht möglich: {html.escape(str(e))})"
+    ads.sort(key=lambda a: int(a["id"]), reverse=True)  # neueste zuerst
     hits = [a for a in ads if keyword_matches(query, a["norm"])]
     if not hits:
         return f"Aktuell keine Anzeigen zu „{html.escape(query)}“ online."
