@@ -39,3 +39,11 @@ Formicarium
 Epiperipatus
 Clemmys|Clemys|Tropfenschildkröte adult|geschlechtsreif|weibchen|female
 Eirenis
+Thamnophis|sirtalis|strumpfband|garter melanis|melanic|
+Schwimmwühlen
+Typhlonectes
+natans
+compressicauda
+Zwergsirene
+Pseudobranchus
+Striatus
