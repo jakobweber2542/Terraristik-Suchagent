@@ -323,7 +323,8 @@ def parse_listing(page_html: str) -> list[dict]:
         ad_id = m.group(1)
         if ad_id in done:
             continue
-        heading = a.find_parent(["h1", "h2", "h3", "h4", "h5"])
+        # Die Überschrift kann um den Link liegen oder im Link stecken (<a><h3>…</h3></a>)
+        heading = a.find_parent(["h1", "h2", "h3", "h4", "h5"]) or a.find(["h1", "h2", "h3", "h4", "h5"])
         if heading is None:
             continue  # Bild-Links o. ä. – die Überschrift kommt noch
         done.add(ad_id)
