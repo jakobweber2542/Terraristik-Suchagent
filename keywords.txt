@@ -5,3 +5,38 @@
 # Zeilen mit # am Anfang werden ignoriert.
 # Du kannst die Liste hier bearbeiten oder per Telegram (/add, /del).
 
+pickeringii
+Storeria
+dekayi
+Wurmfresser
+Wurm fressende Schlange
+Diadophis punctatus
+pseudogeck smaragdinus
+pseudogekko
+ameisen
+ants
+Camponotus
+nicobarensis
+Lasius
+Pheidole
+Messor
+Crematogaster
+Paratrechina
+Weberameisen
+Honigtopfameisen
+Honeypot ant
+termites
+termiten
+Clemmys guttata
+Clemmys
+guttata
+Grasnatter
+Opheodrys
+aestivus
+Epibatis
+barbadensis
+Stummelfüßer
+Velvet worm
+Harpegnathos venator
+Formikarium
+Formicarium
